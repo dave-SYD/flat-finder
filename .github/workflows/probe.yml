@@ -1,0 +1,25 @@
+name: Probe Magicbricks
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Try candidate pages
+        run: |
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+          for u in \
+            "https://www.magicbricks.com/residential-projects-in-gurgaon-nprid/page-1" \
+            "https://www.magicbricks.com/new-projects-Gwalior" \
+            "https://www.magicbricks.com/new-projects-Gwalior/page-2" \
+            "https://www.magicbricks.com/new-projects-Gwalior?page=2" \
+            "https://www.magicbricks.com/new-projects-gwalior"; do
+            code=$(curl -sL -A "$UA" -o /tmp/p.html -w "%{http_code}" "$u")
+            size=$(wc -c < /tmp/p.html)
+            total=$(grep -o '"totalCount":[0-9]*' /tmp/p.html | head -1)
+            cards=$(grep -o '"psmName":' /tmp/p.html | wc -l)
+            echo "HTTP $code | bytes $size | $total | cards $cards"
+            echo "   $u"
+          done
