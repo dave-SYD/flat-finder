@@ -1,0 +1,37 @@
+name: Probe Housing
+
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch sample pages
+        run: |
+          mkdir samples
+          UA="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0 Safari/537.36"
+          i=0
+          for u in \
+            "https://housing.com/in/buy/gwalior/projects/" \
+            "https://housing.com/in/buy/gwalior/projects/?page=2" \
+            "https://housing.com/in/buy/gwalior/dongarpur-gid/projects/" \
+            "https://housing.com/in/buy/projects/page/24999-sunlife-sun-valley-by-sunlife-infratech-in-dongarpur" \
+            "https://housing.com/in/buy/projects/page/231644-pragati-gokuldham-residency-by-pragati-associates-in-dongarpur"; do
+            i=$((i+1))
+            f="samples/page$i.html"
+            code=$(curl -sL --compressed --max-time 60 -A "$UA" -o "$f" -w "%{http_code}" "$u") || code=ERR
+            size=$(wc -c < "$f")
+            links=$(grep -o '/in/buy/projects/page/[0-9]*-' "$f" | sort -u | wc -l)
+            ldjson=$(grep -o 'application/ld+json' "$f" | wc -l)
+            nextdata=$(grep -o '__NEXT_DATA__' "$f" | wc -l)
+            lat=$(grep -o '"lat[a-z]*":[-0-9.]*' "$f" | head -2 | tr '\n' ' ')
+            echo "page$i: HTTP $code | bytes $size | project links $links | ld+json $ldjson | next_data $nextdata | $lat"
+            echo "   $u"
+            sleep 2
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: housing-samples
+          path: samples/
